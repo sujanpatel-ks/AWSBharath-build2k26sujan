@@ -61,3 +61,16 @@ Stack status: UPDATE_COMPLETE
 Resources: 49 active CloudFormation stack resources verified.
 FILES CHANGED: infrastructure/template.yaml (clean inference profile IAM statement), backend/functions/upload/handler.py (virtual hosted S3 addressing style for presigned URLs), docs/DEPLOY_STATE.md
 NEXT: STAGE 6 Verify each service
+## 2026-09-19T11:43:42Z — STAGE 6 Verify each service
+RESULT: PASS
+COMMANDS RUN: uv run --with boto3 python scratch/verify_services.py
+EVIDENCE:
+Lambda: 7/7 functions Active (upload 512MB/10s, diagnosis 1024MB/120s, rag 512MB/30s, weather 512MB/15s, profile 512MB/15s, safety 512MB/10s, alerts 512MB/15s).
+API Gateway: RestApi cswuh02bdi, Stage dev, Authorizer CognitoAuthorizer (COGNITO_USER_POOLS), 13 routes configured.
+Cognito: UserPool ap-south-1_ID0rVVP3m, Client 66o85ou4840kptkt9kmibb10li.
+S3: agrocare-crop-images-dev-570380297278 & agrocare-agri-docs-dev-570380297278 (SSE AES256, BlockPublicAccess True).
+DynamoDB: AgroCare-Main-dev (ACTIVE, PK/SK, GSI: farmerId-createdAt-index).
+EventBridge & SNS: Rule ENABLED -> agrocare-alerts-dev, Topic arn:aws:sns:ap-south-1:570380297278:agrocare-alerts-dev.
+CloudWatch: Alarms agrocare-api-5xx-dev (OK), agrocare-diagnosis-errors-dev (OK).
+FILES CHANGED: docs/DEPLOY_STATE.md
+NEXT: STAGE 7 Frontend wiring
