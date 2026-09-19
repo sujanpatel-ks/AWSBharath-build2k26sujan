@@ -88,3 +88,21 @@ Configured values in frontend/.env.local:
 All routes/pages bundled: LoginPage, DashboardPage, DiagnosisPage, ResultPage, HistoryPage, AssistantPage.
 FILES CHANGED: frontend/package.json (clean vite build script), frontend/.env.local, docs/DEPLOY_STATE.md
 NEXT: STAGE 8 Real end-to-end proof
+## 2026-09-19T11:54:35Z — STAGE 8 Real end-to-end proof
+RESULT: PASS
+COMMANDS RUN: uv run --with boto3 python scratch/test_e2e_proof.py
+EVIDENCE:
+Auth & Isolation: Authenticated requests succeed, 401 gate blocks unauthenticated calls, Farmer A (ID: 31438d7a-...) and Farmer B (ID: 81b3fd4a-...) have distinct isolated tenant IDs.
+S3 Upload: Pre-signed URL generated, 91-byte JPEG uploaded via virtual-hosted PUT (Status 200), s3.head_object verified.
+Deterministic Safety Layer:
+- Normal safe: ALLOW (All checks passed)
+- Missing context: BLOCK (Cannot provide safe recommendation without crop/location)
+- Unsafe weather: DEFER (Weather conditions not suitable for spraying)
+- Low confidence & no evidence: ESCALATE (AI analysis low confidence & no supporting evidence)
+- High risk: MODIFY (High-risk condition detected, expert review recommended)
+Weather: Live execution returns summary and spray window evaluation.
+Persistence: DynamoDB item persisted (PK=FARMER#31438d7a-..., primaryCrops=['Rice', 'Sugarcane']), history queried via API Gateway.
+Controlled Error Handling: Non-existent image/missing fields returns HTTP 400 VALIDATION_ERROR with safe message (no internal AWS details leaked).
+Live Diagnosis Pipeline: Correctly invokes Bedrock Claude Haiku 4.5, handles Bedrock account verification status cleanly (HTTP 502 AI_ERROR) without crash or credential leak.
+FILES CHANGED: docs/DEPLOY_STATE.md
+NEXT: Stage complete. Produce final deployment report.
