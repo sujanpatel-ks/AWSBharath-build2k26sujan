@@ -264,6 +264,9 @@ Resources:
         MaxAge: "'600'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
+        # Browsers send unauthenticated OPTIONS requests before the
+        # authenticated API request. Keep the CORS preflight public.
+        AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt CognitoUserPool.Arn

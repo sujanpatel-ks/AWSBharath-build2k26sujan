@@ -17,22 +17,28 @@ import type {
   WeatherResponse,
 } from "@/types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
+const DEMO_MODE_ENABLED = import.meta.env.VITE_ENABLE_DEMO_MODE === "true";
 
 if (!API_BASE) {
-  console.warn("VITE_API_BASE_URL is not set. API calls will fail.");
+  console.error(
+    "VITE_API_BASE_URL is not set. Configure the AWS API Gateway URL before using the application."
+  );
 }
 
 // ── Helper to check demo mode ────────────────────────────────────────
 
 function isDemoMode(): boolean {
-  return !API_BASE || localStorage.getItem("agro_demo_mode") === "true";
+  return DEMO_MODE_ENABLED && localStorage.getItem("agro_demo_mode") === "true";
 }
 
 // ── Core fetch wrapper ─────────────────────────────────────────────
 
 async function getIdToken(): Promise<string> {
   if (isDemoMode()) return "demo-jwt-token-12345";
+  if (!API_BASE) {
+    throw new Error("AWS API is not configured. Set VITE_API_BASE_URL and rebuild the frontend.");
+  }
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
   if (!token) throw new Error("No auth token available");
@@ -43,6 +49,9 @@ async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  if (!API_BASE) {
+    throw new Error("AWS API is not configured. Set VITE_API_BASE_URL and rebuild the frontend.");
+  }
   const token = await getIdToken();
   const url = `${API_BASE}${path}`;
 

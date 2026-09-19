@@ -13,6 +13,8 @@ import { useAuth } from "@/store/AuthContext";
 
 type Mode = "signin" | "signup" | "confirm";
 
+const DEMO_MODE_ENABLED = import.meta.env.VITE_ENABLE_DEMO_MODE === "true";
+
 export default function LoginPage() {
   const { loginAsDemo } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
@@ -193,20 +195,21 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* Demo Mode Button */}
-        <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col items-center">
-          <button
-            type="button"
-            onClick={loginAsDemo}
-            className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-sm font-semibold border border-emerald-200 shadow-sm transition-all flex items-center justify-center gap-2"
-          >
-            <Leaf className="w-4 h-4 text-emerald-600" />
-            Explore Demo / Preview Mode
-          </button>
-          <p className="text-[11px] text-gray-400 mt-1.5 text-center">
-            Instant full access to Dashboard, AI Crop Scan & Advisory
-          </p>
-        </div>
+        {DEMO_MODE_ENABLED && (
+          <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col items-center">
+            <button
+              type="button"
+              onClick={loginAsDemo}
+              className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-sm font-semibold border border-emerald-200 shadow-sm transition-all flex items-center justify-center gap-2"
+            >
+              <Leaf className="w-4 h-4 text-emerald-600" />
+              Explore Demo / Preview Mode
+            </button>
+            <p className="text-[11px] text-gray-400 mt-1.5 text-center">
+              Instant full access to Dashboard, AI Crop Scan & Advisory
+            </p>
+          </div>
+        )}
       </div>
 
       <p className="mt-6 text-xs text-gray-400 text-center">

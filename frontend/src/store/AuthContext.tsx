@@ -33,6 +33,8 @@ const DEMO_USER: AuthUser = {
   userId: "demo-farmer-001",
 };
 
+const DEMO_MODE_ENABLED = import.meta.env.VITE_ENABLE_DEMO_MODE === "true";
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -41,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
-    if (localStorage.getItem("agro_demo_mode") === "true") {
+    if (DEMO_MODE_ENABLED && localStorage.getItem("agro_demo_mode") === "true") {
       setUser(DEMO_USER);
       setIsDemo(true);
       setIsLoading(false);
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginAsDemo = useCallback(() => {
+    if (!DEMO_MODE_ENABLED) return;
     localStorage.setItem("agro_demo_mode", "true");
     setUser(DEMO_USER);
     setIsDemo(true);
