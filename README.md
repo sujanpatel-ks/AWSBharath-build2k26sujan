@@ -22,6 +22,10 @@ Smallholder farmers often face four connected problems:
 
 AgroCare AI addresses these issues with a guarded workflow that separates observation, retrieval, reasoning, and safety validation before advice reaches the user.
 
+## Solution
+
+AgroCare AI connects a farmer-facing React PWA to authenticated AWS services and a controlled AI decision pipeline. Crop images are uploaded privately, agricultural evidence is retrieved from curated documents, weather is evaluated as decision context, and a deterministic safety layer validates the final recommendation before it is persisted and shown to the farmer.
+
 ## Core workflow
 
 ```text
@@ -51,7 +55,7 @@ DynamoDB persistence -> API response -> farmer-facing result and history
 
 When Bedrock account authorization is unavailable, the pipeline returns a structured, safe error or escalation state rather than fabricating a diagnosis.
 
-## Product capabilities
+## Key features
 
 - **Multimodal crop diagnosis:** Analyze leaf damage, lesions, chlorosis, rust, pests, and nutrient symptoms.
 - **Evidence-grounded recommendations:** Retrieve relevant ICAR, CPCRI, KAU, and other agricultural guidance through RAG.
@@ -90,7 +94,7 @@ flowchart TD
 
 The infrastructure is defined in `infrastructure/template.yaml` and is designed for `ap-south-1`.
 
-### Deployed service responsibilities
+## AWS services
 
 | Service | Responsibility |
 | --- | --- |
@@ -224,6 +228,29 @@ The AWS infrastructure and API routes are deployed through CloudFormation in `ap
 At the time of the latest verification, Amazon Bedrock generative-model access was blocked by account-level authorization/verification. The application handles this condition as a structured `AI_ERROR` or `ESCALATE` response; it is not resolved by code changes or IAM broadening and requires an AWS Support/account-authorization action.
 
 Treat a successful CloudFormation update or frontend build as necessary but insufficient. A release is complete only after an authenticated live request, storage confirmation, safety result, persistence check, and CloudWatch review succeed.
+
+The rest of the verified pipeline—authentication, API authorization, presigned S3 upload, weather, deterministic safety routing, DynamoDB persistence, and tenant isolation—has been exercised live. The remaining AI-generation limitation is external to the codebase and must be resolved through AWS account support.
+
+## Live demo
+
+No public frontend URL is currently published in the verified deployment outputs. The API and AWS backend resources are deployed, but a frontend link should not be listed until a hosted frontend is confirmed to render successfully.
+
+## Team and contributions
+
+The repository records contributions across the following workstreams:
+
+- AWS SAM infrastructure and least-privilege service integration
+- Seven Lambda workflows for upload, diagnosis, RAG, weather, profile, safety, and alerts
+- React PWA pages, authentication flow, API client, and farmer-facing states
+- Agricultural knowledge documents and retrieval-oriented content
+- Unit, component, integration, and production verification evidence
+- Deployment, observability, security, and submission documentation
+
+The full team roster is not encoded in the repository metadata; add the final names and roles to the submission form rather than inventing them here.
+
+## AI tools used
+
+AI-assisted engineering was used for implementation support, documentation drafting, test planning, and review. AWS CLI, AWS SAM CLI, Python/pytest, and frontend test tooling were used to validate the resulting work. Live AWS verification—not generated output—was used as the source of truth for resource status and deployment claims.
 
 ## Further documentation
 
