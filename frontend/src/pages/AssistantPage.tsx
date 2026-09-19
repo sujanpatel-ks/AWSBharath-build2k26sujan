@@ -79,11 +79,12 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto flex flex-col h-[calc(100dvh-8rem)]">
+    <div className="mx-auto flex h-[calc(100dvh-8rem)] max-w-2xl flex-col">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
-        <h1 className="page-header">Agricultural Advisory</h1>
-        <p className="page-subheader">Evidence-backed answers from the knowledge base</p>
+      <div className="flex-shrink-0 border-b border-[#bfc9c3]/40 px-4 pb-4 pt-8 sm:px-6">
+        <p className="agro-eyebrow mb-2">AgroCare advisor</p>
+        <h1 className="page-header text-3xl">Agricultural Advisory</h1>
+        <p className="page-subheader mt-1">Evidence-backed answers for the next decision in your field.</p>
       </div>
 
       {/* Messages */}

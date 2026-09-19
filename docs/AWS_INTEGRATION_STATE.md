@@ -43,3 +43,9 @@ Evidence source: `aws cloudformation describe-stacks --region ap-south-1 --stack
 - Restored the original AgroCare visual language in the AWS frontend: botanical green palette, soil-white surfaces, Sprout branding, `Cultivating Intelligence` identity, rounded farm cards, raised crop scanner, and desktop navigation rail.
 - Kept the AWS Cognito sign-in, registration, API client, and route guards unchanged underneath the presentation updates.
 - Verification: `npm run typecheck` passed and `npm run build` passed.
+
+## 2026-09-20 — Phase 5: visual consistency across application flows
+
+- Applied the same AgroCare visual system to crop diagnosis, diagnosis history, agricultural advisory, and diagnosis result screens.
+- Kept upload, S3 presigned URL, diagnosis, RAG, history, and result API calls unchanged.
+- Verification: `npm run typecheck`, `npm run build`, and `git diff --check` passed.

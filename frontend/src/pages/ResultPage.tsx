@@ -46,13 +46,13 @@ export default function ResultPage() {
   const confidencePct = Math.round(result.confidence * 100);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-28 space-y-5">
+    <div className="mx-auto max-w-2xl space-y-5 px-4 pb-28 pt-8 sm:px-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <div>
-          <p className="text-xs text-gray-400 mb-1">{formatDate(result.created_at)}</p>
-          <h1 className="page-header">{result.crop} Diagnosis</h1>
-          <p className="text-sm text-gray-500">{result.possible_condition}</p>
+          <p className="agro-eyebrow mb-2">Diagnosis report · {formatDate(result.created_at)}</p>
+          <h1 className="page-header text-3xl">{result.crop} Diagnosis</h1>
+          <p className="mt-1 text-sm font-medium text-[#707974]">{result.possible_condition}</p>
         </div>
       </div>
 
@@ -72,12 +72,12 @@ export default function ResultPage() {
             <span>AI Confidence</span>
             <span className="font-semibold">{confidencePct}%</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 overflow-hidden rounded-full bg-[#edeeef]">
             <div
               className="h-full rounded-full transition-all"
               style={{
                 width: `${confidencePct}%`,
-                backgroundColor: confidencePct >= 70 ? "#22c55e" : confidencePct >= 40 ? "#f59e0b" : "#ef4444",
+                backgroundColor: confidencePct >= 70 ? "#2b6954" : confidencePct >= 40 ? "#f59e0b" : "#ef4444",
               }}
             />
           </div>

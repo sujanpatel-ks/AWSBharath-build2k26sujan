@@ -70,10 +70,11 @@ export default function DiagnosisPage() {
   const isSubmitting = step !== "form";
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-28">
-      <div className="mb-6">
-        <h1 className="page-header">Crop Diagnosis</h1>
-        <p className="page-subheader">Upload a photo and tell us about your crop</p>
+    <div className="mx-auto max-w-2xl px-4 pb-28 pt-8 sm:px-6">
+      <div className="mb-7">
+        <p className="agro-eyebrow mb-2">AI crop scanner</p>
+        <h1 className="page-header text-3xl">Crop Diagnosis</h1>
+        <p className="page-subheader mt-1">Upload a photo and tell us what your field is showing.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -87,16 +88,16 @@ export default function DiagnosisPage() {
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileRef.current?.click()}
               className={clsx(
-                "border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-colors",
-                dragOver ? "border-agro-500 bg-agro-50" : "border-gray-300 hover:border-agro-400 hover:bg-gray-50"
+                "flex cursor-pointer flex-col items-center gap-3 rounded-[28px] border-2 border-dashed bg-white p-10 shadow-sm transition-colors",
+                dragOver ? "border-[#003527] bg-[#b0f0d6]/20" : "border-[#bfc9c3] hover:border-[#2b6954] hover:bg-[#f4faf6]"
               )}
               role="button" aria-label="Upload crop image"
             >
-              <div className="w-14 h-14 rounded-full bg-agro-100 flex items-center justify-center">
-                <Camera className="w-7 h-7 text-agro-600" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#b0f0d6]/45">
+                <Camera className="h-7 w-7 text-[#003527]" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-700">Tap to upload or drag a photo</p>
+                <p className="text-sm font-bold text-[#404944]">Tap to upload or drag a photo</p>
                 <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — max {MAX_SIZE_MB}MB</p>
               </div>
               <button type="button" className="btn-secondary text-xs px-4 py-2">

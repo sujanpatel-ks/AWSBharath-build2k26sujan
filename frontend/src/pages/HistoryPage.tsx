@@ -26,10 +26,11 @@ export default function HistoryPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-28">
-      <div className="mb-5">
-        <h1 className="page-header">Diagnosis History</h1>
-        <p className="page-subheader">All your past crop diagnoses</p>
+    <div className="mx-auto max-w-2xl px-4 pb-28 pt-8 sm:px-6">
+      <div className="mb-6">
+        <p className="agro-eyebrow mb-2">Field notes</p>
+        <h1 className="page-header text-3xl">Diagnosis History</h1>
+        <p className="page-subheader mt-1">Every crop scan, treatment signal, and safety decision.</p>
       </div>
 
       {/* Search */}
