@@ -1,4 +1,4 @@
-import { CloudSun, CloudRain, Wind, Thermometer, Droplets, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { CloudSun, CloudRain, Thermometer, Droplets, AlertTriangle, CheckCircle2 } from "lucide-react";
 import clsx from "clsx";
 import type { WeatherContext } from "@/types";
 

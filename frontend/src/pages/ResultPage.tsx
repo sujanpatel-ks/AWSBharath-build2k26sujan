@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  CheckCircle2, AlertTriangle, XCircle, Clock, ArrowUpCircle,
+  AlertTriangle, XCircle, Clock, ArrowUpCircle,
   ChevronDown, ChevronUp, BookOpen, CloudSun, ShieldCheck, Leaf, Share2
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -232,3 +232,4 @@ function formatDate(iso: string) {
     hour: "2-digit", minute: "2-digit",
   });
 }
+

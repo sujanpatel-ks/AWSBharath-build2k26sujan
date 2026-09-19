@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import { vi, beforeAll, afterAll } from "vitest";
 
 // Mock aws-amplify/auth — no real Cognito calls in unit tests
 vi.mock("aws-amplify/auth", () => ({

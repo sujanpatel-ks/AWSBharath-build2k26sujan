@@ -1,4 +1,4 @@
-import { BookOpen, ExternalLink } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import type { Evidence } from "@/types";
 
 interface Props {
@@ -32,3 +32,4 @@ export default function EvidenceCard({ evidence }: Props) {
     </div>
   );
 }
+

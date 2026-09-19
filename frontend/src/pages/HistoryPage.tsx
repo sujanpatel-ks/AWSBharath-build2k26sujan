@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Leaf, ChevronRight, AlertTriangle, Search, Filter } from "lucide-react";
+import { Leaf, ChevronRight, Search, Filter } from "lucide-react";
 import { useDiagnosisHistory } from "@/hooks/useDiagnosis";
 import RiskBadge from "@/components/ui/RiskBadge";
 import SafetyDecisionIcon from "@/components/ui/SafetyDecisionIcon";
@@ -121,3 +121,4 @@ function formatDate(iso: string) {
     day: "numeric", month: "short", year: "numeric",
   });
 }
+

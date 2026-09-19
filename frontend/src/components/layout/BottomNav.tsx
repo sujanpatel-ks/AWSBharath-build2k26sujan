@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Scan, MessageSquare, Clock } from "lucide-react";
 import clsx from "clsx";
 

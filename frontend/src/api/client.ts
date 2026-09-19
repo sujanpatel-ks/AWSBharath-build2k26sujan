@@ -10,6 +10,7 @@ import type {
   DiagnosisFormValues,
   DiagnosisHistoryResponse,
   DiagnosisResponse,
+  DiagnosisSummary,
   FarmerProfile,
   PresignedUrlResponse,
   RAGResponse,
@@ -83,65 +84,62 @@ export class ApiClientError extends Error {
 
 const DEMO_DIAGNOSES_STORE: Record<string, DiagnosisResponse> = {};
 
-function getDemoDiagnosis(crop = "Arecanut", location = "Mandya, Karnataka", growthStage = "Vegetative", symptoms = "Yellow leaves with brown spots"): DiagnosisResponse {
+function getDemoDiagnosis(crop = "Arecanut", _location = "Mandya, Karnataka", _growthStage = "Vegetative", _symptoms = "Yellow leaves with brown spots"): DiagnosisResponse {
   return {
     diagnosis_id: `diag-demo-${Date.now()}`,
     farmer_id: "demo-farmer-001",
-    crop: crop || "Arecanut",
-    location: location || "Mandya, Karnataka",
-    growth_stage: (growthStage as any) || "Vegetative",
-    symptoms: symptoms || "Yellowing leaves with brown spots",
-    image_key: "demo/arecanut_leaf.jpg",
-    status: "COMPLETED",
-    diagnosis: {
-      disease_name: "Yellow Leaf Disease (YLD)",
-      scientific_name: "Phytoplasma / Ganoderma lucidum",
-      confidence_score: 94,
-      risk_level: "HIGH",
-      summary: `${crop || "Arecanut"} Yellow Leaf Disease detected with 94% confidence. Leaves show progressive yellowing from tip to base with stunted crown growth. Early intervention is strongly recommended to prevent yield reduction.`,
-      organic_treatment: [
-        {
-          step: 1,
-          title: "Trichoderma Viride Root Application",
-          description: "Apply 50g Trichoderma Viride bio-fungicide mixed with 5kg organic compost per palm root zone twice annually.",
-          dosage: "50g per tree",
-          frequency: "Pre-monsoon and Post-monsoon",
-          precautions: "Do not mix directly with chemical fungicides within 14 days of application.",
-        },
-        {
-          step: 2,
-          title: "Deep Soil Drainage Channel",
-          description: "Construct 45cm deep drainage channels between palm rows to prevent water stagnation around feeder roots.",
-          dosage: "N/A",
-          frequency: "Continuous maintenance",
-          precautions: "Avoid severing main structural roots during excavation.",
-        }
-      ],
-      chemical_treatment: [
-        {
-          step: 1,
-          title: "Root Feeding Hexaconazole 5% EC",
-          description: "Prepare 2ml Hexaconazole 5% EC in 100ml water and feed through healthy active root tip.",
-          dosage: "2ml in 100ml water per palm",
-          frequency: "Every 45 days during monsoon",
-          precautions: "Use protective gloves; handle chemical with care.",
-        },
-        {
-          step: 2,
-          title: "Soil Micronutrient Drenching",
-          description: "Apply Magnesium Sulphate (50g) and Zinc Sulphate (25g) per palm to restore chlorophyll synthesis.",
-          dosage: "75g mix per palm",
-          frequency: "Every 6 months",
-          precautions: "Apply in 1-meter radius ring from tree trunk.",
-        }
-      ],
-      preventive_measures: [
-        "Avoid root mechanical injuries during weeding and tilling.",
-        "Maintain balanced NPK fertilizer ratio (100:40:140g per palm per year).",
-        "Perform regular soil pH testing; maintain target pH between 6.0 and 6.8.",
-      ],
-    },
     created_at: new Date().toISOString(),
+    crop: crop || "Arecanut",
+    possible_condition: "Yellow Leaf Disease (YLD)",
+    confidence: 94,
+    observations: [
+      "Leaves show progressive yellowing from tip to base",
+      "Stunted crown growth and root decay observed",
+      "Early intervention recommended to prevent yield reduction"
+    ],
+    risk_level: "HIGH",
+    evidence: [
+      {
+        source: "CPCRI Technical Bulletin No. 42",
+        text: "Yellow leaf disease symptoms in arecanut are characterized by foliar chlorosis starting from inner whorls.",
+        score: 0.94
+      }
+    ],
+    weather_context: {
+      summary: "28°C, 65% humidity, Partly cloudy",
+      spray_window_safe: true,
+      rain_expected_hours: null,
+      temperature_celsius: 28,
+      humidity_percent: 65,
+      advisory: "Conditions appear suitable for field operations."
+    },
+    safety_status: "ALLOW",
+    safety_reason: "Recommended treatment is within approved ICAR dosage guidelines.",
+    recommendation: {
+      summary: "Apply Trichoderma Viride mixed with organic compost and establish 45cm deep drainage channels.",
+      action_plan: [
+        "Apply 50g Trichoderma Viride bio-fungicide mixed with 5kg organic compost per palm root zone twice annually.",
+        "Construct 45cm deep drainage channels between palm rows to prevent water stagnation.",
+        "Feed Hexaconazole 5% EC (2ml in 100ml water) through healthy root tip if fungal spread continues."
+      ],
+      dosage_instructions: "50g Trichoderma per palm; 2ml Hexaconazole per 100ml water.",
+      timing_instructions: "Apply during clear weather morning window before 11 AM.",
+      precautions: [
+        "Do not mix chemical fungicides directly with bio-agents.",
+        "Wear protective gloves during chemical application."
+      ],
+      sources: [
+        {
+          source: "ICAR Crop Advisory Handbook",
+          text: "Standard integrated pest management protocol for arecanut plantation.",
+          score: 0.92
+        }
+      ],
+      needs_expert_review: false,
+      follow_up_days: 7
+    },
+    needs_expert_review: false,
+    workflow_complete: true
   };
 }
 
@@ -155,6 +153,9 @@ export async function getPresignedUploadUrl(
     return {
       uploadUrl: "https://httpbin.org/put",
       key: `demo/${Date.now()}_${filename}`,
+      bucket: "agrocare-crop-images-demo",
+      expiresIn: 900,
+      maxFileSizeBytes: 10 * 1024 * 1024
     };
   }
   const params = new URLSearchParams({ filename, contentType });
@@ -220,31 +221,37 @@ export async function getDiagnosisHistory(
   if (isDemoMode()) {
     const list: DiagnosisSummary[] = [
       {
-        diagnosis_id: "diag-demo-101",
+        diagnosisId: "diag-demo-101",
         crop: "Arecanut",
-        disease_name: "Yellow Leaf Disease (YLD)",
-        risk_level: "HIGH",
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+        possibleCondition: "Yellow Leaf Disease (YLD)",
+        confidence: "94%",
+        riskLevel: "HIGH",
+        safetyDecision: "ALLOW",
+        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
         location: "Mandya, Karnataka",
       },
       {
-        diagnosis_id: "diag-demo-102",
+        diagnosisId: "diag-demo-102",
         crop: "Paddy / Rice",
-        disease_name: "Paddy Blast (Pyricularia oryzae)",
-        risk_level: "MEDIUM",
-        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+        possibleCondition: "Paddy Blast (Pyricularia oryzae)",
+        confidence: "88%",
+        riskLevel: "MEDIUM",
+        safetyDecision: "ALLOW",
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
         location: "Mandya, Karnataka",
       },
       {
-        diagnosis_id: "diag-demo-103",
+        diagnosisId: "diag-demo-103",
         crop: "Tomato",
-        disease_name: "Early Blight (Alternaria solani)",
-        risk_level: "LOW",
-        created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
+        possibleCondition: "Early Blight (Alternaria solani)",
+        confidence: "76%",
+        riskLevel: "LOW",
+        safetyDecision: "ALLOW",
+        createdAt: new Date(Date.now() - 86400000 * 12).toISOString(),
         location: "Mandya, Karnataka",
       },
     ];
-    return { diagnoses: list.slice(0, limit) };
+    return { diagnoses: list.slice(0, limit), count: list.length, nextKey: null };
   }
   const params = new URLSearchParams({ limit: String(limit) });
   if (startKey) params.set("startKey", startKey);
@@ -254,12 +261,15 @@ export async function getDiagnosisHistory(
 // ── Profile ────────────────────────────────────────────────────────
 
 let DEMO_PROFILE_STORE: FarmerProfile = {
-  farmer_id: "demo-farmer-001",
+  farmerId: "demo-farmer-001",
   name: "Ramesh Kumar",
+  email: "ramesh.farmer@agrocare.ai",
+  phone: "+91 9876543210",
   location: "Mandya, Karnataka",
-  preferred_crop: "Arecanut & Paddy",
-  preferred_language: "kn",
-  created_at: new Date().toISOString(),
+  farmSizeAcres: 4.5,
+  primaryCrops: ["Arecanut", "Paddy"],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 export async function getProfile(): Promise<FarmerProfile> {
@@ -305,11 +315,12 @@ export async function queryKnowledge(
     return {
       answer,
       sources: [
-        { title: "ICAR Agricultural Advisory Handbook", section: "Crop Health", page: 14 },
-        { title: "CPCRI Arecanut & Coconut Technical Bulletin", section: "Disease Management", page: 8 },
+        { text: "ICAR Agricultural Advisory Handbook: Crop Health and integrated management.", source: "ICAR Handbook", score: 0.92 },
+        { text: "CPCRI Arecanut & Coconut Technical Bulletin on disease management.", source: "CPCRI Bulletin", score: 0.88 },
       ],
+      confidence: 0.91,
       insufficient_evidence: false,
-      question_type: "rag",
+      question_type: "static",
     };
   }
   return apiFetch<RAGResponse>("/agriculture/query", {
