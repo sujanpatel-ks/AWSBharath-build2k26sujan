@@ -50,3 +50,14 @@ SSM Parameter: /agrocare/knowledge-base-id is set to pending-setup.
 KB Ingestion Status: Blocked because Titan Text Embeddings V2 (amazon.titan-embed-text-v2:0) is awaiting account verification (Operation not allowed), which prevents vector embedding generation.
 FILES CHANGED: docs/DEPLOY_STATE.md
 NEXT: STAGE 5 Build & deploy (unblocked stages per Section 6 protocol)
+## 2026-09-19T11:42:38Z — STAGE 5 Build & deploy
+RESULT: PASS
+COMMANDS RUN: sam validate --template-file infrastructure/template.yaml; sam build --template-file infrastructure/template.yaml; sam deploy --config-file infrastructure/samconfig.toml --stack-name agrocare-ai-dev --region ap-south-1 --resolve-s3 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-confirm-changeset
+EVIDENCE:
+sam validate: valid SAM Template
+sam build: Build Succeeded
+sam deploy: Successfully created/updated stack - agrocare-ai-dev in ap-south-1
+Stack status: UPDATE_COMPLETE
+Resources: 49 active CloudFormation stack resources verified.
+FILES CHANGED: infrastructure/template.yaml (clean inference profile IAM statement), backend/functions/upload/handler.py (virtual hosted S3 addressing style for presigned URLs), docs/DEPLOY_STATE.md
+NEXT: STAGE 6 Verify each service
