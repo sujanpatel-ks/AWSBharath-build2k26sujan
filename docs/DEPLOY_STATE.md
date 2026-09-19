@@ -29,3 +29,15 @@ Bedrock KBs: [] -> CREATE in STAGE 4
 Zero duplicate resources created.
 FILES CHANGED: docs/DEPLOY_STATE.md
 NEXT: STAGE 3 Bedrock access
+## 2026-09-19T11:39:19Z — STAGE 3 Bedrock access
+RESULT: BLOCKED
+COMMANDS RUN: aws bedrock list-foundation-models; aws bedrock list-inference-profiles; uv run --with boto3 python test_bedrock_models.py
+EVIDENCE:
+Discovered Inference Profiles:
+- Claude Haiku 4.5: arn:aws:bedrock:ap-south-1:570380297278:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0 (ACTIVE)
+- Claude Sonnet 4.6: arn:aws:bedrock:ap-south-1:570380297278:inference-profile/global.anthropic.claude-sonnet-4-6 (ACTIVE)
+- Titan Text Embeddings V2: amazon.titan-embed-text-v2:0
+Live Invocation Result:
+All model invocations returned: ValidationException: Operation not allowed (Account verification for Bedrock Generative AI in progress on account 570380297278).
+FILES CHANGED: docs/DEPLOY_STATE.md
+NEXT: STAGE 4 Knowledge Base & RAG (unblocked stages per Section 6 blocker protocol)
