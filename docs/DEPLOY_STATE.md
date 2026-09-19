@@ -41,3 +41,12 @@ Live Invocation Result:
 All model invocations returned: ValidationException: Operation not allowed (Account verification for Bedrock Generative AI in progress on account 570380297278).
 FILES CHANGED: docs/DEPLOY_STATE.md
 NEXT: STAGE 4 Knowledge Base & RAG (unblocked stages per Section 6 blocker protocol)
+## 2026-09-19T11:40:29Z — STAGE 4 Knowledge Base & RAG
+RESULT: BLOCKED
+COMMANDS RUN: aws s3 ls s3://agrocare-agri-docs-dev-570380297278/ --recursive; uv run --with boto3 python check_kb.py; aws ssm get-parameter --name /agrocare/knowledge-base-id
+EVIDENCE:
+Seeded Documents: 8/8 real agricultural guides verified in s3://agrocare-agri-docs-dev-570380297278/documents/ (arecanut_koleroga, rice_cultivation, tomato_blight, npk_deficiency, itk compendium, traditional pest management, bacterial leaf blight, fall armyworm).
+SSM Parameter: /agrocare/knowledge-base-id is set to pending-setup.
+KB Ingestion Status: Blocked because Titan Text Embeddings V2 (amazon.titan-embed-text-v2:0) is awaiting account verification (Operation not allowed), which prevents vector embedding generation.
+FILES CHANGED: docs/DEPLOY_STATE.md
+NEXT: STAGE 5 Build & deploy (unblocked stages per Section 6 protocol)
