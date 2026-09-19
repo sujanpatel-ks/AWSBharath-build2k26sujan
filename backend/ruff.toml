@@ -1,0 +1,15 @@
+# AgroCare AI — Ruff linter configuration
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "C4", "T20"]
+ignore = [
+    "S101",   # assert statements allowed in tests
+    "S603",   # subprocess without shell=True — false positive
+    "T201",   # print allowed in scripts
+]
+per-file-ignores = { "tests/**" = ["S101", "S106", "S105"] }
+
+[lint.isort]
+known-first-party = ["shared", "functions"]

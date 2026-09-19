@@ -1,0 +1,71 @@
+# ============================================================
+# AgroCare AI — .gitignore
+# ============================================================
+
+# ---- Secrets & environment --------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+credentials
+
+# ---- Python -----------------------------------------------
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+venv/
+.venv/
+env/
+*.pyc
+
+# ---- Node / Frontend --------------------------------------
+node_modules/
+.pnp
+.pnp.js
+frontend/dist/
+frontend/build/
+frontend/.vite/
+*.local
+
+# ---- AWS SAM / CDK ----------------------------------------
+.aws-sam/
+samconfig.toml.bak
+cdk.out/
+*.cfn.json
+
+# ---- IDE --------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Logs -------------------------------------------------
+*.log
+logs/
+
+# ---- Test artifacts ---------------------------------------
+coverage/
+test-results/
+junit.xml
+
+# ---- Misc -------------------------------------------------
+*.zip
+*.tar.gz
+tmp/
+.temp/

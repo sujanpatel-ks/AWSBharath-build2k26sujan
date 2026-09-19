@@ -1,0 +1,891 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AgroCare AI — AWS-Native Agricultural Intelligence Platform
+  Hackathon implementation | Region: ap-south-1
+
+# ============================================================
+# GLOBAL DEFAULTS
+# ============================================================
+Globals:
+  Function:
+    Runtime: python3.12
+    MemorySize: 512
+    Timeout: 30
+    Environment:
+      Variables:
+        POWERTOOLS_SERVICE_NAME: agrocare-ai
+        LOG_LEVEL: INFO
+        AWS_REGION_NAME: !Ref AWS::Region
+        DYNAMODB_TABLE: !Ref AgroCareDynamoTable
+        S3_IMAGES_BUCKET: !Ref CropImagesBucket
+        S3_DOCUMENTS_BUCKET: !Ref AgriculturalDocsBucket
+        COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+        COGNITO_APP_CLIENT_ID: !Ref CognitoUserPoolClient
+        # Model IDs — verified for ap-south-1 (September 2026)
+        HAIKU_MODEL_ID: "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+        SONNET_MODEL_ID: "anthropic.claude-sonnet-4-6"
+        EMBEDDING_MODEL_ID: "amazon.titan-embed-text-v2:0"
+        WEATHER_API_KEY_PARAM: "/agrocare/weather-api-key"
+        KNOWLEDGE_BASE_ID: "{{resolve:ssm:/agrocare/knowledge-base-id}}"
+    Layers:
+      - !Ref AgrocareSharedLayer
+    Tracing: Active
+  Api:
+    TracingEnabled: true
+
+# ============================================================
+# PARAMETERS
+# ============================================================
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Deployment environment
+
+  AllowedOrigin:
+    Type: String
+    Default: "http://localhost:5173"
+    Description: "Frontend origin for CORS (e.g. https://app.agrocare.ai)"
+
+# ============================================================
+# RESOURCES
+# ============================================================
+Resources:
+
+  # ----------------------------------------------------------
+  # SHARED LAMBDA LAYER
+  # ----------------------------------------------------------
+  AgrocareSharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "agrocare-shared-${Environment}"
+      Description: Shared utilities for AgroCare Lambda functions
+      ContentUri: ../backend/layer/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.12
+
+  # ----------------------------------------------------------
+  # S3 BUCKETS
+  # ----------------------------------------------------------
+  CropImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "agrocare-crop-images-${Environment}-${AWS::AccountId}"
+# AccessControl: Private (deprecated in favor of BucketPolicy)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldImages
+            Status: Enabled
+            ExpirationInDays: 90
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ["*"]
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: [!Ref AllowedOrigin]
+            MaxAge: 3000
+
+  CropImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CropImagesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "arn:aws:s3:::${CropImagesBucket}"
+              - !Sub "arn:aws:s3:::${CropImagesBucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  AgriculturalDocsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "agrocare-agri-docs-${Environment}-${AWS::AccountId}"
+# AccessControl: Private (deprecated in favor of BucketPolicy)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AgriculturalDocsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AgriculturalDocsBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "arn:aws:s3:::${AgriculturalDocsBucket}"
+              - !Sub "arn:aws:s3:::${AgriculturalDocsBucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # ----------------------------------------------------------
+  # DYNAMODB TABLE (single-table design)
+  # ----------------------------------------------------------
+  AgroCareDynamoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "AgroCare-Main-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      TableClass: STANDARD
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: farmerId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: farmerId-createdAt-index
+          KeySchema:
+            - AttributeName: farmerId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: AgroCare
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ----------------------------------------------------------
+  # COGNITO USER POOL
+  # ----------------------------------------------------------
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "agrocare-users-${Environment}"
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireUppercase: false
+          RequireSymbols: false
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: phone_number
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+        - Name: custom:location
+          AttributeDataType: String
+          Mutable: true
+        - Name: custom:farm_size
+          AttributeDataType: String
+          Mutable: true
+      MfaConfiguration: "OFF"
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      UserPoolAddOns:
+        AdvancedSecurityMode: AUDIT
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "agrocare-web-client-${Environment}"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+      PreventUserExistenceErrors: ENABLED
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      AccessTokenValidity: 8
+      IdTokenValidity: 8
+      RefreshTokenValidity: 30
+
+  # ----------------------------------------------------------
+  # API GATEWAY
+  # ----------------------------------------------------------
+  AgroCareApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "agrocare-api-${Environment}"
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
+        MaxAge: "'600'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            Identity:
+              Header: Authorization
+      GatewayResponses:
+        UNAUTHORIZED:
+          StatusCode: 401
+          ResponseTemplates:
+            application/json: '{"error":"UNAUTHORIZED","message":"Authentication required"}'
+        ACCESS_DENIED:
+          StatusCode: 403
+          ResponseTemplates:
+            application/json: '{"error":"FORBIDDEN","message":"Access denied"}'
+        DEFAULT_4XX:
+          ResponseTemplates:
+            application/json: '{"error":"CLIENT_ERROR","message":"$context.error.messageString"}'
+        DEFAULT_5XX:
+          ResponseTemplates:
+            application/json: '{"error":"SERVER_ERROR","message":"An internal error occurred"}'
+      MethodSettings:
+        - LoggingLevel: 'OFF'
+          MetricsEnabled: true
+          ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 20
+      TracingEnabled: true
+      Tags:
+        Project: AgroCare
+        Environment: !Ref Environment
+
+  # ----------------------------------------------------------
+  # LAMBDA FUNCTIONS
+  # ----------------------------------------------------------
+
+  # Upload — generates pre-signed S3 URLs
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-upload-${Environment}"
+      CodeUri: ../backend/functions/upload/
+      Handler: handler.lambda_handler
+      Description: "Generates pre-signed S3 URLs for crop image upload"
+      Timeout: 10
+      Role: !GetAtt UploadFunctionRole.Arn
+      Events:
+        GetPresigned:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /upload/presigned
+            Method: GET
+
+  UploadFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-upload-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: UploadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${CropImagesBucket}/crop-images/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-upload-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # Diagnosis — main orchestrator
+  DiagnosisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-diagnosis-${Environment}"
+      CodeUri: ../backend/functions/diagnosis/
+      Handler: handler.lambda_handler
+      Description: "Main diagnosis orchestrator: image analysis → RAG → safety → recommendation"
+      Timeout: 120
+      MemorySize: 1024
+      Role: !GetAtt DiagnosisFunctionRole.Arn
+      Events:
+        CreateDiagnosis:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /diagnosis
+            Method: POST
+        GetDiagnosis:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /diagnosis/{id}
+            Method: GET
+        GetHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /diagnosis/history
+            Method: GET
+
+  DiagnosisFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-diagnosis-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DiagnosisPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${CropImagesBucket}/crop-images/*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !GetAtt AgroCareDynamoTable.Arn
+                  - !Sub "${AgroCareDynamoTable.Arn}/index/*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-sonnet-4-6"
+                  - "arn:aws:bedrock:*::foundation-model/*"
+                  - !Sub "arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*"
+              - Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                  - bedrock:RetrieveAndGenerate
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - bedrock:ApplyGuardrail
+                Resource: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/*"
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/agrocare/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-diagnosis-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # RAG — Knowledge Base query
+  RagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-rag-${Environment}"
+      CodeUri: ../backend/functions/rag/
+      Handler: handler.lambda_handler
+      Description: "Agricultural knowledge retrieval via Bedrock Knowledge Base"
+      Timeout: 30
+      Role: !GetAtt RagFunctionRole.Arn
+      Events:
+        QueryKnowledge:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /agriculture/query
+            Method: POST
+
+  RagFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-rag-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RagPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                  - bedrock:RetrieveAndGenerate
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/agrocare/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-rag-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # Weather — fetch and cache weather context
+  WeatherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-weather-${Environment}"
+      CodeUri: ../backend/functions/weather/
+      Handler: handler.lambda_handler
+      Description: "Weather context fetch and spray-window evaluation"
+      Timeout: 15
+      Role: !GetAtt WeatherFunctionRole.Arn
+      Events:
+        GetWeather:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /weather
+            Method: GET
+
+  WeatherFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-weather-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WeatherPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/agrocare/weather-api-key"
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt AgroCareDynamoTable.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-weather-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # Profile — farmer CRUD
+  ProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-profile-${Environment}"
+      CodeUri: ../backend/functions/profile/
+      Handler: handler.lambda_handler
+      Description: "Farmer profile and farm context management"
+      Timeout: 15
+      Role: !GetAtt ProfileFunctionRole.Arn
+      Events:
+        GetProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /profile
+            Method: GET
+        UpdateProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /profile
+            Method: PUT
+        GetFarms:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /profile/farms
+            Method: GET
+        CreateFarm:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /profile/farms
+            Method: POST
+
+  ProfileFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-profile-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ProfilePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt AgroCareDynamoTable.Arn
+                  - !Sub "${AgroCareDynamoTable.Arn}/index/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-profile-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # Safety — deterministic validation (internal, no API route — called directly by diagnosis)
+  SafetyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-safety-${Environment}"
+      CodeUri: ../backend/functions/safety/
+      Handler: handler.lambda_handler
+      Description: "Deterministic safety validation for agricultural recommendations"
+      Timeout: 10
+      Role: !GetAtt SafetyFunctionRole.Arn
+      Events:
+        ValidateRecommendation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgroCareApi
+            Path: /recommendation/validate
+            Method: POST
+
+  SafetyFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-safety-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SafetyPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-safety-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # ----------------------------------------------------------
+  # CLOUDWATCH LOG GROUPS (explicit, with retention)
+  # ----------------------------------------------------------
+  DiagnosisLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-diagnosis-${Environment}"
+      RetentionInDays: 14
+
+  UploadLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-upload-${Environment}"
+      RetentionInDays: 14
+
+  RagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-rag-${Environment}"
+      RetentionInDays: 14
+
+  WeatherLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-weather-${Environment}"
+      RetentionInDays: 14
+
+  ProfileLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-profile-${Environment}"
+      RetentionInDays: 14
+
+  SafetyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-safety-${Environment}"
+      RetentionInDays: 14
+
+  # ----------------------------------------------------------
+  # CLOUDWATCH ALARMS
+  # ----------------------------------------------------------
+  DiagnosisErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "agrocare-diagnosis-errors-${Environment}"
+      AlarmDescription: "Diagnosis Lambda error rate > 5%"
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiagnosisFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  ApiGateway5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "agrocare-api-5xx-${Environment}"
+      AlarmDescription: "API Gateway 5xx errors"
+      MetricName: 5XXError
+      Namespace: AWS/ApiGateway
+      Dimensions:
+        - Name: ApiName
+          Value: !Sub "agrocare-api-${Environment}"
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  # ----------------------------------------------------------
+  # SNS ALERT TOPIC
+  # ----------------------------------------------------------
+  AgroCareSNSAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "agrocare-alerts-${Environment}"
+      DisplayName: "AgroCare AI Agricultural Alerts"
+      Tags:
+        - Key: Project
+          Value: AgroCare
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ----------------------------------------------------------
+  # ALERTS LAMBDA (7th function — EventBridge + SNS)
+  # ----------------------------------------------------------
+  AlertsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "agrocare-alerts-${Environment}"
+      CodeUri: ../backend/functions/alerts/
+      Handler: handler.lambda_handler
+      Description: "Event-driven high-risk diagnosis alerts via SNS"
+      Timeout: 15
+      Role: !GetAtt AlertsFunctionRole.Arn
+      Environment:
+        Variables:
+          SNS_ALERT_TOPIC_ARN: !Ref AgroCareSNSAlertTopic
+      Events:
+        HighRiskDiagnosisEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - "agrocare.diagnosis"
+              detail-type:
+                - "HighRiskDiagnosis"
+
+  AlertsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "agrocare-alerts-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AlertsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref AgroCareSNSAlertTopic
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/agrocare-alerts-${Environment}:*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  AlertsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/agrocare-alerts-${Environment}"
+      RetentionInDays: 14
+
+  # ----------------------------------------------------------
+  # EVENTBRIDGE — publish high-risk diagnosis events from diagnosis Lambda
+  # ----------------------------------------------------------
+  DiagnosisFunctionEventBridgePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "agrocare-diagnosis-eventbridge-${Environment}"
+      Roles:
+        - !Ref DiagnosisFunctionRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - events:PutEvents
+            Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default"
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${AgroCareApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "AgroCare-ApiUrl-${Environment}"
+
+  CognitoUserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub "AgroCare-UserPoolId-${Environment}"
+
+  CognitoAppClientId:
+    Description: "Cognito App Client ID"
+    Value: !Ref CognitoUserPoolClient
+    Export:
+      Name: !Sub "AgroCare-AppClientId-${Environment}"
+
+  CropImagesBucketName:
+    Description: "S3 bucket for crop images"
+    Value: !Ref CropImagesBucket
+    Export:
+      Name: !Sub "AgroCare-CropImagesBucket-${Environment}"
+
+  AgriculturalDocsBucketName:
+    Description: "S3 bucket for agricultural knowledge documents"
+    Value: !Ref AgriculturalDocsBucket
+    Export:
+      Name: !Sub "AgroCare-AgriDocsBucket-${Environment}"
+
+  DynamoTableName:
+    Description: "DynamoDB table name"
+    Value: !Ref AgroCareDynamoTable
+    Export:
+      Name: !Sub "AgroCare-DynamoTable-${Environment}"
+
+  SNSAlertTopicArn:
+    Description: "SNS topic ARN for high-risk agricultural alerts"
+    Value: !Ref AgroCareSNSAlertTopic
+    Export:
+      Name: !Sub "AgroCare-SNSAlertTopic-${Environment}"

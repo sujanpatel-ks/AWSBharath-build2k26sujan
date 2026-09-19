@@ -1,0 +1,1 @@
+# AgroCare AI — shared package

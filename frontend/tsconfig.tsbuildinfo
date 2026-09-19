@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/api/amplify-config.ts","./src/api/client.ts","./src/pages/dashboardpage.tsx","./src/pages/loginpage.tsx","./src/store/authcontext.tsx","./src/types/index.ts"],"errors":true,"version":"5.9.3"}

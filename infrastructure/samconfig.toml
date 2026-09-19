@@ -1,0 +1,43 @@
+# AWS SAM configuration for AgroCare AI
+# Do NOT commit environment-specific values with secrets.
+# Override with --parameter-overrides or CI/CD env vars.
+
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "agrocare-ai-dev"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+region            = "ap-south-1"
+capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = true
+resolve_s3        = true
+s3_prefix         = "agrocare-ai"
+parameter_overrides = [
+  "Environment=dev",
+  "AllowedOrigin=http://localhost:5173"
+]
+
+[default.sync.parameters]
+watch = true
+
+[prod]
+[prod.deploy.parameters]
+region             = "ap-south-1"
+stack_name         = "agrocare-ai-prod"
+capabilities       = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset  = true
+resolve_s3         = true
+s3_prefix          = "agrocare-ai-prod"
+parameter_overrides = [
+  "Environment=prod",
+  "AllowedOrigin=https://YOUR_PROD_DOMAIN_HERE"
+]
