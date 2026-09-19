@@ -6,16 +6,16 @@ export default {
       colors: {
         // AgroCare brand palette — earthy, farm-appropriate
         agro: {
-          50:  "#f0fdf4",
-          100: "#dcfce7",
-          200: "#bbf7d0",
-          300: "#86efac",
-          400: "#4ade80",
-          500: "#22c55e",  // primary green
-          600: "#16a34a",
-          700: "#15803d",
-          800: "#166534",
-          900: "#14532d",
+          50:  "#f4faf6",
+          100: "#e2f3ea",
+          200: "#b0f0d6",
+          300: "#80bea6",
+          400: "#4d9b79",
+          500: "#2b6954",
+          600: "#003527",
+          700: "#064e3b",
+          800: "#002117",
+          900: "#00150e",
         },
         earth: {
           50:  "#fefce8",
@@ -38,6 +38,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui"],
+        display: ["Hanken Grotesk", "Inter", "ui-sans-serif", "system-ui"],
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",

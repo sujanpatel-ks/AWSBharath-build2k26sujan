@@ -4,9 +4,9 @@ import TopBar from "./TopBar";
 
 export default function AppLayout() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="agro-shell flex min-h-screen flex-col">
       <TopBar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto md:pl-24">
         <Outlet />
       </main>
       <BottomNav />

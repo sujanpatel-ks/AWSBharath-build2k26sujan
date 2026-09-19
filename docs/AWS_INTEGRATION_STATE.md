@@ -37,3 +37,9 @@ Evidence source: `aws cloudformation describe-stacks --region ap-south-1 --stack
 - Deploy the SAM template update and confirm `OPTIONS` returns the configured CORS headers.
 - Register/sign in with a real Cognito test user, then verify authenticated API calls.
 - Bedrock model access remains an external account-level blocker already documented in `docs/DEPLOY_STATE.md` and `docs/PROD_TEST_STATE.md`.
+
+## 2026-09-20 — Phase 4: original AgroCare design restoration
+
+- Restored the original AgroCare visual language in the AWS frontend: botanical green palette, soil-white surfaces, Sprout branding, `Cultivating Intelligence` identity, rounded farm cards, raised crop scanner, and desktop navigation rail.
+- Kept the AWS Cognito sign-in, registration, API client, and route guards unchanged underneath the presentation updates.
+- Verification: `npm run typecheck` passed and `npm run build` passed.

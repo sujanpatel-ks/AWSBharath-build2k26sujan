@@ -6,7 +6,7 @@ import {
   resendSignUpCode,
 } from "aws-amplify/auth";
 import toast from "react-hot-toast";
-import { Leaf, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Sprout } from "lucide-react";
 import clsx from "clsx";
 
 import { useAuth } from "@/store/AuthContext";
@@ -84,33 +84,36 @@ export default function LoginPage() {
   }
 
   const inputClass =
-    "block w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-agro-500 focus:outline-none focus:ring-1 focus:ring-agro-500";
+    "block w-full rounded-2xl border border-[#bfc9c3] bg-white px-3 py-3 text-sm text-[#191c1d] placeholder-[#707974] focus:border-[#003527] focus:outline-none focus:ring-1 focus:ring-[#003527]";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-agro-50 to-white px-4 py-12">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#f8f9fa] px-4 py-12">
+      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#b0f0d6]/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-[#fd9e70]/10 blur-3xl" />
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-agro-600 flex items-center justify-center shadow-lg mb-3">
-          <Leaf className="w-9 h-9 text-white" />
+        <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] bg-[#003527] text-white shadow-2xl shadow-[#003527]/20">
+          <Sprout className="h-11 w-11" strokeWidth={1.8} />
+          <div className="absolute -inset-3 rounded-[36px] border-2 border-[#003527]/10" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">AgroCare AI</h1>
-        <p className="text-sm text-gray-500 mt-1">Agricultural intelligence for every farmer</p>
+        <h1 className="font-display text-3xl font-black tracking-tight text-[#191c1d]">AgroCare AI</h1>
+        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.28em] text-[#2b6954]">Cultivating Intelligence</p>
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-md ring-1 ring-gray-100 p-6">
+      <div className="relative w-full max-w-sm rounded-[32px] border border-[#bfc9c3]/40 bg-white p-6 shadow-[0_24px_70px_rgba(0,53,39,0.10)]">
         {/* Tab switcher */}
         {mode !== "confirm" && (
-          <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+          <div className="mb-6 flex rounded-2xl bg-[#edeeef] p-1">
             {(["signin", "signup"] as Mode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 className={clsx(
-                  "flex-1 py-2 text-sm font-medium rounded-md transition-all",
+                  "flex-1 rounded-xl py-2 text-sm font-bold transition-all",
                   mode === m
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-white text-[#003527] shadow-sm"
+                    : "text-[#707974] hover:text-[#191c1d]"
                 )}
               >
                 {m === "signin" ? "Sign In" : "Register"}
@@ -139,7 +142,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
             </button>
           </form>
@@ -170,7 +173,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
             </button>
           </form>
@@ -185,11 +188,11 @@ export default function LoginPage() {
             <input type="text" required maxLength={6} placeholder="123456"
               className={inputClass + " text-center text-xl tracking-widest font-mono"}
               value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify Email"}
             </button>
             <button type="button" onClick={handleResend}
-              className="w-full text-sm text-agro-600 hover:text-agro-700 font-medium">
+              className="w-full text-sm font-bold text-[#2b6954] hover:text-[#003527]">
               Resend code
             </button>
           </form>
@@ -202,7 +205,7 @@ export default function LoginPage() {
               onClick={loginAsDemo}
               className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-sm font-semibold border border-emerald-200 shadow-sm transition-all flex items-center justify-center gap-2"
             >
-              <Leaf className="w-4 h-4 text-emerald-600" />
+              <Sprout className="w-4 h-4 text-[#2b6954]" />
               Explore Demo / Preview Mode
             </button>
             <p className="text-[11px] text-gray-400 mt-1.5 text-center">
@@ -212,7 +215,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      <p className="mt-6 text-xs text-gray-400 text-center">
+      <p className="mt-6 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-[#707974]">
         AgroCare AI · Powered by Amazon Bedrock · ap-south-1
       </p>
     </div>
