@@ -74,3 +74,17 @@ EventBridge & SNS: Rule ENABLED -> agrocare-alerts-dev, Topic arn:aws:sns:ap-sou
 CloudWatch: Alarms agrocare-api-5xx-dev (OK), agrocare-diagnosis-errors-dev (OK).
 FILES CHANGED: docs/DEPLOY_STATE.md
 NEXT: STAGE 7 Frontend wiring
+## 2026-09-19T11:51:53Z — STAGE 7 Frontend wiring
+RESULT: PASS
+COMMANDS RUN: npm run build
+EVIDENCE:
+Vite build completed in 9.28s with zero errors.
+Configured values in frontend/.env.local:
+- VITE_AWS_REGION: ap-south-1
+- VITE_COGNITO_USER_POOL_ID: ap-south-1_ID0rVVP3m
+- VITE_COGNITO_APP_CLIENT_ID: 66o85ou4840kptkt9kmibb10li
+- VITE_COGNITO_CLIENT_ID: 66o85ou4840kptkt9kmibb10li
+- VITE_API_BASE_URL: https://cswuh02bdi.execute-api.ap-south-1.amazonaws.com/dev
+All routes/pages bundled: LoginPage, DashboardPage, DiagnosisPage, ResultPage, HistoryPage, AssistantPage.
+FILES CHANGED: frontend/package.json (clean vite build script), frontend/.env.local, docs/DEPLOY_STATE.md
+NEXT: STAGE 8 Real end-to-end proof
